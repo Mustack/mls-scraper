@@ -1,0 +1,8 @@
+{
+  "name": "",
+  "version": "",
+  "dependencies": {
+    "mongodb": "^2.2.21",
+    "rx": "^4.1.0"
+  }
+}
