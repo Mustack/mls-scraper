@@ -1,4 +1,5 @@
-var Rx = require('rx');
+const Rx = require('rx');
+const request = require('request-promise');
 
 const queryData = {
   CultureId: 1,
@@ -12,10 +13,10 @@ const queryData = {
   StoreyRange: '0-0',
   BedRange: '0-0',
   BathRange: '0-0',
-  LongitudeMin: -75.69957733154297,
-  LongitudeMax: -75.56370735168457,
-  LatitudeMin: 45.36321135649902, // Don't change
-  LatitudeMax: 45.42095453461164, // Don't change
+  LongitudeMin:-75.9629487991333,
+  LongitudeMax:-75.4194688796997,
+  LatitudeMin:45.266398626775796, // Don't change
+  LatitudeMax:45.497412480399944, // Don't change
   SortOrder: 'A',
   SortBy: 1,
   viewState: 'm',
@@ -31,9 +32,46 @@ const queryData = {
 // of its results. This is probably to stop scraping. This means we have to
 // query a smaller geographical area to get fewer than 51 pages of results.
 const mapSlice$ = Rx.Observable.create(observer => {
-  // Yield a single value and complete
-  observer.onNext(42);
-  observer.onCompleted();
+  let callCount = 0;
+
+  // Recursively searches for smaller and smaller slices until there are
+  // fewer than 51 pages of results.
+  function findSlice(start, width) {
+    callCount++;
+
+    const subsectionQueryData = Object.assign(queryData, {
+      LongitudeMin: start,
+      LongitudeMax: queryData.LongitudeMin + width
+    });
+
+    request({
+      method: 'POST',
+      uri: 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post',
+      form: subsectionQueryData
+    })
+    .then(result => JSON.parse(result))
+    .then(result => {
+      const pageNum = result.Paging.TotalPages;
+      console.log(`start: ${start}, width: ${width}, pages: ${pageNum}`);
+
+      if (pageNum > 50) {
+        // recurse with half the width
+        const half = width / 2;
+        findSlice(start, half);
+        findSlice(start + half, width);
+      } else {
+        // This is a small enough slice to yield to the next observable
+        observer.onNext(result);
+      }
+
+      callCount--;
+      if (callCount === 0) {
+        observer.onCompleted();
+      }
+    });
+  }
+
+  findSlice(queryData.LongitudeMin, queryData.LongitudeMax - queryData.LongitudeMin);
 
   // Any cleanup logic might go here
   return () => console.log('disposed')
@@ -42,9 +80,7 @@ const mapSlice$ = Rx.Observable.create(observer => {
 const listings$ = mapSlice$.subscribe(
   x => console.log('onNext: %s', x),
   e => console.log('onError: %s', e),
-  () => console.log('onCompleted'));
+  () => console.log('onCompleted')
+);
 
-// => onNext: 42
-// => onCompleted
-
-listings$.dispose();
+// listings$.dispose();

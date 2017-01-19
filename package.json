@@ -3,6 +3,8 @@
   "version": "",
   "dependencies": {
     "mongodb": "^2.2.21",
+    "request": "^2.79.0",
+    "request-promise": "^4.1.1",
     "rx": "^4.1.0"
   }
 }
