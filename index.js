@@ -26,6 +26,10 @@ const queryData = {
 };
 
 
+// This stream will find slices on the map that have fewer than 51 pages
+// of results. realtor.ca seems to fail when you request the 51st page
+// of its results. This is probably to stop scraping. This means we have to
+// query a smaller geographical area to get fewer than 51 pages of results.
 const mapSlice$ = Rx.Observable.create(observer => {
   // Yield a single value and complete
   observer.onNext(42);
