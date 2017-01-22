@@ -20,12 +20,19 @@ const queryData = {
   SortOrder: 'A',
   SortBy: 1,
   viewState: 'm',
-  CurrentPage: 21,
+  CurrentPage: 1,
   PropertyTypeGroupID: 1,
   Token: 'D6TmfZprLI9DXo9uooFJ+oc79wEmi/Ss4ENwpa1cVIE=',
   GUID: '55016750-1ba7-418d-9e81-09c3d70fddcc'
 };
 
+function getListingsPage(queryData) {
+  return request({
+    method: 'POST',
+    uri: 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post',
+    form: queryData
+  });
+}
 
 // This stream will find slices on the map that have fewer than 51 pages
 // of results. realtor.ca seems to fail when you request the 51st page
@@ -44,11 +51,7 @@ const mapSlice$ = Rx.Observable.create(observer => {
       LongitudeMax: queryData.LongitudeMin + width
     });
 
-    request({
-      method: 'POST',
-      uri: 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post',
-      form: subsectionQueryData
-    })
+    getListingsPage(subsectionQueryData)
     .then(result => JSON.parse(result))
     .then(result => {
       const pageNum = result.Paging.TotalPages;
@@ -61,7 +64,7 @@ const mapSlice$ = Rx.Observable.create(observer => {
         findSlice(start + half, width);
       } else {
         // This is a small enough slice to yield to the next observable
-        observer.onNext(result);
+        observer.onNext({queryData: subsectionQueryData, result});
       }
 
       callCount--;
@@ -75,12 +78,18 @@ const mapSlice$ = Rx.Observable.create(observer => {
 
   // Any cleanup logic might go here
   return () => console.log('disposed')
-});
+})
+.flatMap(function getListingPages({queryData, result}) {
+  return Rx.Observable.create(observer => {
+    observer.onNext(result.Results);
 
-const listings$ = mapSlice$.subscribe(
-  x => console.log('onNext: %s', x),
-  e => console.log('onError: %s', e),
-  () => console.log('onCompleted')
-);
-
-// listings$.dispose();
+    for(let i=2; i<result.Paging.TotalPages; i++) {
+      getListingsPage(Object.assign(queryData, {CurrentPage: i}))
+        .then(page => observer.onNext(page.Results));
+    }
+  });
+})
+.map(function processListing(listing) {
+  console.log(listing);
+})
+.subscribe();
