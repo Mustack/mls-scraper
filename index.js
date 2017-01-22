@@ -1,5 +1,6 @@
 const Rx = require('rx');
 const request = require('request-promise');
+const pThrottle = require('p-throttle');
 
 const queryData = {
   CultureId: 1,
@@ -26,14 +27,14 @@ const queryData = {
   GUID: '55016750-1ba7-418d-9e81-09c3d70fddcc'
 };
 
-function getListingsPage(queryData) {
+const getListingsPage = pThrottle(queryData => {
   return request({
     method: 'POST',
     uri: 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post',
     form: queryData
   })
   .then(result => JSON.parse(result));
-}
+}, 1, 1000);
 
 // This stream will find slices on the map that have fewer than 51 pages
 // of results. realtor.ca seems to fail when you request the 51st page
@@ -92,6 +93,6 @@ const mapSlice$ = Rx.Observable.create(observer => {
 })
 .flatMap(Rx.Observable.fromArray)
 .map(listing => {
-  console.log(listing);
+  console.log(listing.Id);
 })
 .subscribe();
