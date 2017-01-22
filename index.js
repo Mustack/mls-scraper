@@ -31,7 +31,8 @@ function getListingsPage(queryData) {
     method: 'POST',
     uri: 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post',
     form: queryData
-  });
+  })
+  .then(result => JSON.parse(result));
 }
 
 // This stream will find slices on the map that have fewer than 51 pages
@@ -52,26 +53,25 @@ const mapSlice$ = Rx.Observable.create(observer => {
     });
 
     getListingsPage(subsectionQueryData)
-    .then(result => JSON.parse(result))
-    .then(result => {
-      const pageNum = result.Paging.TotalPages;
-      console.log(`start: ${start}, width: ${width}, pages: ${pageNum}`);
+      .then(result => {
+        const pageNum = result.Paging.TotalPages;
+        console.log(`start: ${start}, width: ${width}, pages: ${pageNum}`);
 
-      if (pageNum > 50) {
-        // recurse with half the width
-        const half = width / 2;
-        findSlice(start, half);
-        findSlice(start + half, width);
-      } else {
-        // This is a small enough slice to yield to the next observable
-        observer.onNext({queryData: subsectionQueryData, result});
-      }
+        if (pageNum > 50) {
+          // recurse with half the width
+          const half = width / 2;
+          findSlice(start, half);
+          findSlice(start + half, width);
+        } else {
+          // This is a small enough slice to yield to the next observable
+          observer.onNext({queryData: subsectionQueryData, result});
+        }
 
-      callCount--;
-      if (callCount === 0) {
-        observer.onCompleted();
-      }
-    });
+        callCount--;
+        if (callCount === 0) {
+          observer.onCompleted();
+        }
+      });
   }
 
   findSlice(queryData.LongitudeMin, queryData.LongitudeMax - queryData.LongitudeMin);
@@ -79,6 +79,7 @@ const mapSlice$ = Rx.Observable.create(observer => {
   // Any cleanup logic might go here
   return () => console.log('disposed')
 })
+.filter(({result}) => result.Results.length)
 .flatMap(function getListingPages({queryData, result}) {
   return Rx.Observable.create(observer => {
     observer.onNext(result.Results);
@@ -89,7 +90,8 @@ const mapSlice$ = Rx.Observable.create(observer => {
     }
   });
 })
-.map(function processListing(listing) {
+.flatMap(Rx.Observable.fromArray)
+.map(listing => {
   console.log(listing);
 })
 .subscribe();
