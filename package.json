@@ -2,6 +2,8 @@
   "name": "",
   "version": "",
   "dependencies": {
+    "cheerio": "^0.22.0",
+    "deepcopy": "^0.6.3",
     "p-throttle": "^1.1.0",
     "promised-mongo": "^1.2.0",
     "request": "^2.79.0",

@@ -1,7 +1,8 @@
 const Rx = require('rx');
-const request = require('request-promise');
-const pThrottle = require('p-throttle');
 const mongodb = require('promised-mongo');
+
+const htmlListingScraper = require('./htmlListingScraper');
+const {getListingsPage} = require('./requestHelpers');
 
 const queryData = {
   CultureId: 1,
@@ -29,15 +30,6 @@ const queryData = {
 };
 
 const db = mongodb('mls-scraper');
-
-const getListingsPage = pThrottle(queryData => {
-  return request({
-    method: 'POST',
-    uri: 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post',
-    form: queryData
-  })
-  .then(result => JSON.parse(result));
-}, 1, 1000);
 
 // This stream will find slices on the map that have fewer than 51 pages
 // of results. realtor.ca seems to fail when you request the 51st page
@@ -104,5 +96,10 @@ const mapSlice$ = Rx.Observable.create(observer => {
   return Rx.Observable.fromPromise(existsInDb);
 })
 .filter(listing => listing) // Don't do anything if it already exists
-.map(listing => console.log(listing))
-.subscribe();
+.flatMap(listing => {
+  const listingInserted = htmlListingScraper(listing)
+    .then(db.Listings.insert);
+
+  return Rx.Observable.fromPromise(listingInserted);
+})
+.subscribe(updatedListing => console.log(`Added listing ${updatedListing.Id}`));
