@@ -77,7 +77,6 @@ const mapSlice$ = Rx.Observable.create(observer => {
 })
 .filter(({result}) => result.Results.length)
 .flatMap(function getListingPages({queryData, result}) {
-  console.log(`getting pages`)
   return Rx.Observable.create(observer => {
     observer.onNext(result.Results);
 
@@ -89,7 +88,6 @@ const mapSlice$ = Rx.Observable.create(observer => {
 })
 .flatMap(Rx.Observable.fromArray)
 .flatMap(listing => {
-  console.log('getting listings')
   // If it exists, return false so the filter operation can
   // filter out this listing
   const existsInDb = db.Listings.findOne({Id: listing.Id})
