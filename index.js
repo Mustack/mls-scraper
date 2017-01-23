@@ -77,6 +77,7 @@ const mapSlice$ = Rx.Observable.create(observer => {
 })
 .filter(({result}) => result.Results.length)
 .flatMap(function getListingPages({queryData, result}) {
+  console.log(`getting pages`)
   return Rx.Observable.create(observer => {
     observer.onNext(result.Results);
 
@@ -88,6 +89,7 @@ const mapSlice$ = Rx.Observable.create(observer => {
 })
 .flatMap(Rx.Observable.fromArray)
 .flatMap(listing => {
+  console.log('getting listings')
   // If it exists, return false so the filter operation can
   // filter out this listing
   const existsInDb = db.Listings.findOne({Id: listing.Id})
@@ -98,8 +100,8 @@ const mapSlice$ = Rx.Observable.create(observer => {
 .filter(listing => listing) // Don't do anything if it already exists
 .flatMap(listing => {
   const listingInserted = htmlListingScraper(listing)
-    .then(db.Listings.insert);
+    .then(newListing => db.Listings.insert(newListing));
 
   return Rx.Observable.fromPromise(listingInserted);
 })
-.subscribe(updatedListing => console.log(`Added listing ${updatedListing.Id}`));
+.subscribe(updatedListing => console.log(`Added listing ${Object.keys(updatedListing.detailedInfo).length}`));
