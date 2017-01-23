@@ -96,22 +96,13 @@ const mapSlice$ = Rx.Observable.create(observer => {
 })
 .flatMap(Rx.Observable.fromArray)
 .flatMap(listing => {
-  const existsInDb = new Promise((resolve, reject) => {
-    db.Listings.findOne({Id: listing.Id})
-      .then(result => {
-        if (result) {
-          resolve(false); // will be filtered out
-        } else {
-          db.Listings.insert(listing)
-            .then(resolve)
-            .catch(reject);
-        }
-      })
-      .catch(reject);
-  });
+  // If it exists, return false so the filter operation can
+  // filter out this listing
+  const existsInDb = db.Listings.findOne({Id: listing.Id})
+    .then(result => result ? false : listing);
 
   return Rx.Observable.fromPromise(existsInDb);
 })
-.filter(listing => listing)
+.filter(listing => listing) // Don't do anything if it already exists
 .map(listing => console.log(listing))
 .subscribe();
