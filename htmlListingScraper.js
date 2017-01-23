@@ -8,7 +8,7 @@ function parseString(str) {
     return str;
   }
 
-  return parseInt(str)
+  return parseInt(str);
 }
 
 function htmlListingScraper(listing) {
