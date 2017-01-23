@@ -1,6 +1,7 @@
 const Rx = require('rx');
 const request = require('request-promise');
 const pThrottle = require('p-throttle');
+const mongodb = require('promised-mongo');
 
 const queryData = {
   CultureId: 1,
@@ -26,6 +27,8 @@ const queryData = {
   Token: 'D6TmfZprLI9DXo9uooFJ+oc79wEmi/Ss4ENwpa1cVIE=',
   GUID: '55016750-1ba7-418d-9e81-09c3d70fddcc'
 };
+
+const db = mongodb('mls-scraper');
 
 const getListingsPage = pThrottle(queryData => {
   return request({
@@ -92,7 +95,23 @@ const mapSlice$ = Rx.Observable.create(observer => {
   });
 })
 .flatMap(Rx.Observable.fromArray)
-.map(listing => {
-  console.log(listing.Id);
+.flatMap(listing => {
+  const existsInDb = new Promise((resolve, reject) => {
+    db.Listings.findOne({Id: listing.Id})
+      .then(result => {
+        if (result) {
+          resolve(false); // will be filtered out
+        } else {
+          db.Listings.insert(listing)
+            .then(resolve)
+            .catch(reject);
+        }
+      })
+      .catch(reject);
+  });
+
+  return Rx.Observable.fromPromise(existsInDb);
 })
+.filter(listing => listing)
+.map(listing => console.log(listing))
 .subscribe();

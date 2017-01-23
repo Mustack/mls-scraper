@@ -2,8 +2,8 @@
   "name": "",
   "version": "",
   "dependencies": {
-    "mongodb": "^2.2.21",
     "p-throttle": "^1.1.0",
+    "promised-mongo": "^1.2.0",
     "request": "^2.79.0",
     "request-promise": "^4.1.1",
     "rx": "^4.1.0"
